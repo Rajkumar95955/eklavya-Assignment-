@@ -1,0 +1,106 @@
+
+---
+
+## Frontend (Optional)
+
+### `frontend/index.html`
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Assessment v2 - Auditable Content Pipeline</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>🎓 AI Educational Content Pipeline v2</h1>
+            <p>Governed, Auditable, Schema-Validated</p>
+        </header>
+
+        <!-- Input Form -->
+        <section class="card">
+            <h2>📝 Generate Content</h2>
+            <form id="generateForm">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="grade">Grade Level</label>
+                        <select id="grade" required>
+                            <option value="1">Grade 1</option>
+                            <option value="2">Grade 2</option>
+                            <option value="3">Grade 3</option>
+                            <option value="4">Grade 4</option>
+                            <option value="5" selected>Grade 5</option>
+                            <option value="6">Grade 6</option>
+                            <option value="7">Grade 7</option>
+                            <option value="8">Grade 8</option>
+                        </select>
+                    </div>
+                    <div class="form-group flex-grow">
+                        <label for="topic">Topic</label>
+                        <input type="text" id="topic" value="Fractions as parts of a whole" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="userId">User ID (Optional)</label>
+                    <input type="text" id="userId" placeholder="your-user-id">
+                </div>
+                <button type="submit" id="submitBtn">
+                    🚀 Run Pipeline
+                </button>
+            </form>
+        </section>
+
+        <!-- Loading State -->
+        <section class="card loading-card" id="loadingCard" style="display: none;">
+            <div class="loading-spinner"></div>
+            <p>Running pipeline... This may take 30-60 seconds.</p>
+        </section>
+
+        <!-- Results -->
+        <section id="resultsSection" style="display: none;">
+            <!-- Pipeline Summary -->
+            <div class="card" id="summaryCard">
+                <h2>📊 Pipeline Summary</h2>
+                <div class="summary-grid" id="summaryGrid"></div>
+            </div>
+
+            <!-- Attempts Timeline -->
+            <div class="card">
+                <h2>🔄 Attempt Timeline</h2>
+                <div class="timeline" id="timeline"></div>
+            </div>
+
+            <!-- Final Content -->
+            <div class="card" id="finalContentCard" style="display: none;">
+                <h2>📄 Final Approved Content</h2>
+                <div id="finalContent"></div>
+            </div>
+
+            <!-- Tags -->
+            <div class="card" id="tagsCard" style="display: none;">
+                <h2>🏷️ Content Tags</h2>
+                <div id="tags"></div>
+            </div>
+
+            <!-- Raw Artifact -->
+            <div class="card">
+                <h2>🔍 Raw Artifact (Audit Trail)</h2>
+                <button class="toggle-btn" onclick="toggleRawArtifact()">Show/Hide JSON</button>
+                <pre id="rawArtifact" style="display: none;"></pre>
+            </div>
+        </section>
+
+        <!-- History -->
+        <section class="card">
+            <h2>📚 Recent Runs</h2>
+            <button onclick="loadHistory()" class="secondary-btn">Load History</button>
+            <div id="historyList"></div>
+        </section>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
