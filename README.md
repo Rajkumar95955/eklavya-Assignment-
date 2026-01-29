@@ -1,181 +1,270 @@
-Governed, Auditable AI Content Pipeline
+# 🧠 AI Assessment – Part 2
 
-A structured AI system that generates educational content through a governed, testable, and auditable pipeline.
-The project emphasizes engineering discipline over model creativity by enforcing strict schemas, bounded refinement, and a complete audit trail for every run.
+## Governed, Auditable AI Content Pipeline
 
-📌 Project Overview
+This repository implements a **deterministic, auditable AI content generation pipeline** for educational material, extending **Part 1** with governance, validation, quality gates, bounded refinement, persistence, and testing.
 
-AI-generated content systems often lack transparency, explainability, and control. This project addresses those gaps by building a governed AI pipeline where:
+The focus is **engineering discipline**, not agent count or UI polish.
 
-Outputs are strictly schema-validated
+---
 
-Quality is quantitatively reviewed
+## 📌 Core Objective
 
-Refinement is bounded and explainable
+Build a pipeline where:
 
-Every execution produces a full audit record
+* All AI outputs are **schema-validated**
+* Content quality is **quantitatively evaluated**
+* Refinement is **bounded and explainable**
+* Every run produces a **single, complete audit artifact**
+* The system is **fully testable**
+* All decisions are **deterministic and logged**
 
-The system is designed to be deterministic, testable, and production-oriented, making it suitable for regulated or educational use cases.
+---
 
-🎯 Objectives
+## 🏗️ Architecture Overview
 
-Generate grade-appropriate educational content
+```
+POST /generate
+  → Generator Agent
+      → Schema Validation (retry once)
+  → Reviewer Agent
+      → Pass / Fail decision
+  → Refiner Agent (max 2 attempts if failed)
+      → Re-review after each refinement
+  → Tagger Agent (only if approved)
+  → Persist RunArtifact
+  → Return RunArtifact
+```
 
-Enforce strict output schemas using validation
+All steps contribute to **one immutable RunArtifact**.
 
-Quantitatively evaluate content quality
+---
 
-Refine content with bounded retries
+## 🧩 Agent Roles
 
-Produce a single RunArtifact capturing the full lifecycle
+### 1️⃣ Generator Agent
 
-Ensure the system is fully testable and auditable
+**Purpose**
+Generate an initial educational artifact for a given grade and topic.
 
-🧠 Key Features
+**Input**
 
-Schema-validated content generation (Pydantic)
+```json
+{ "grade": 5, "topic": "Fractions as parts of a whole" }
+```
 
-Quantitative review with pass/fail thresholds
+**Output (Strictly Schema-Validated)**
 
-Field-level, explainable feedback
+* Explanation (grade-appropriate)
+* MCQs
+* Teacher notes
 
-Bounded refinement (maximum two attempts)
+**Rules**
 
-Deterministic orchestration logic
+* Output must validate against Pydantic schema
+* One automatic retry on schema failure
+* Second failure → pipeline terminates gracefully
+* No free-form output allowed
 
-Complete audit trail for every run
+---
 
-Mock-friendly design for reliable testing
+### 2️⃣ Reviewer Agent (Gatekeeper)
 
-🧩 Agent Architecture
-Generator Agent
+**Purpose**
+Quantitatively evaluate content quality and decide pass/fail.
 
-Produces an initial draft based on grade and topic
+**Output**
 
-Outputs explanation, MCQs, and teacher notes
+```json
+{
+  "scores": {
+    "age_appropriateness": 1-5,
+    "correctness": 1-5,
+    "clarity": 1-5,
+    "coverage": 1-5
+  },
+  "pass": true,
+  "feedback": [
+    { "field": "explanation.text", "issue": "Sentence too complex" }
+  ]
+}
+```
 
-Retries once on schema validation failure
+**Pass Criteria**
 
-Reviewer Agent
+* Each score ≥ **3**
+* Average score ≥ **3.5**
+* No critical correctness issues
 
-Scores content on:
+**Key Property**
 
-Age appropriateness
+* Feedback is **field-level and explainable**
+* No subjective or vague feedback allowed
 
-Correctness
+---
 
-Clarity
+### 3️⃣ Refiner Agent
 
-Coverage
+**Purpose**
+Improve content using **only reviewer feedback**.
 
-Makes a pass/fail decision
+**Rules**
 
-Provides field-level feedback
+* Maximum **2 refinement attempts**
+* Each attempt is logged
+* Refinement is deterministic (same input → same output)
+* If content still fails after 2 attempts → **rejected**
 
-Refiner Agent
+---
 
-Improves content using reviewer feedback
+### 4️⃣ Tagger Agent
 
-Maximum of two refinement attempts
+**Purpose**
+Classify **approved content only**.
 
-Each attempt is logged
+**Output**
 
-Tagger Agent
+```json
+{
+  "subject": "Mathematics",
+  "topic": "Fractions",
+  "grade": 5,
+  "difficulty": "Medium",
+  "content_type": ["Explanation", "Quiz"],
+  "blooms_level": "Understanding"
+}
+```
 
-Runs only on approved content
+**Rule**
 
-Assigns subject, topic, grade, difficulty, and Bloom’s level
+* Never invoked if content is rejected
 
-⚙️ Orchestration Logic
+---
 
-The orchestrator coordinates the full pipeline:
+## 🔁 Orchestration Decisions
 
-Generate content
+* **Deterministic flow** (no branching randomness)
+* **Bounded retries**
 
-Review content
+  * Generator: 1 retry on schema failure
+  * Refiner: max 2 attempts
+* **Single RunArtifact per request**
+* **Fail-fast** on unrecoverable errors
+* **Explainability first**: every decision is logged
 
-Refine and re-review (bounded retries)
+---
 
-Approve and tag, or reject
+## 🧾 RunArtifact (Audit Trail)
 
-Produce a single RunArtifact
+Every `/generate` call returns and stores:
 
-Key guarantees:
+```json
+{
+  "run_id": "...",
+  "input": { "grade": 5, "topic": "Fractions" },
+  "attempts": [
+    {
+      "attempt": 1,
+      "draft": { ... },
+      "review": { ... },
+      "refined": { ... }
+    }
+  ],
+  "final": {
+    "status": "approved | rejected",
+    "content": { ... },
+    "tags": { ... }
+  },
+  "timestamps": {
+    "started_at": "...",
+    "finished_at": "..."
+  }
+}
+```
 
-Deterministic flow
+This artifact captures the **entire lifecycle** of the generation attempt.
 
-No infinite retries
+---
 
-Clear rejection reasons
+## 💾 Persistence
 
-Full auditability
+* All RunArtifacts are stored
+* Includes:
 
-📦 RunArtifact (Audit Trail)
+  * Inputs
+  * Drafts
+  * Reviews
+  * Refinements
+  * Final decision
+  * Tags
+  * Timestamps
 
-Each run produces a RunArtifact containing:
+**Database**
 
-Input parameters
+* SQLite (default)
+* PostgreSQL compatible
 
-All generation, review, and refinement attempts
+---
 
-Final decision (approved or rejected)
+## 🌐 API Endpoints
 
-Tags (if approved)
+### `POST /generate`
 
-Timestamps and execution duration
+Runs the full pipeline and returns the RunArtifact.
 
-This artifact serves as the single source of truth for auditing and analysis.
+### `GET /history?user_id=...`
 
-🛠️ Tech Stack
+Returns stored RunArtifacts for a user.
 
-Programming Language: Python
+---
 
-Core Libraries:
+## 🧪 Testing (Mandatory & Implemented)
 
-Pydantic (schema validation)
+LLM calls are **mocked**.
 
-Pytest (testing)
+### Included Tests
 
-FastAPI-ready architecture
+1. **Schema validation failure handling**
+2. **Fail → refine → pass orchestration**
+3. **Fail → refine → fail → reject orchestration**
 
-Testing:
+Tests ensure:
 
-Mocked LLM calls
+* Retry limits are enforced
+* Final status is correct
+* Audit trail is complete
 
-Deterministic orchestration tests
+---
 
-🧪 Testing
+## ⚖️ Trade-offs
 
-The project includes tests covering:
+* **Determinism over creativity**
+  Ensures reproducibility and auditability.
+* **Strict schemas over flexibility**
+  Prevents silent failures.
+* **Bounded refinement over infinite loops**
+  Guarantees termination.
+* **No agent autonomy**
+  Orchestrator controls all flow.
 
-Schema validation failure handling
+---
 
-Fail → refine → pass orchestration
+## 🚫 Explicitly Excluded
 
-Fail → refine → fail → reject orchestration
+* No background jobs
+* No streaming
+* No auto-scaling agents
+* No UI dependency (frontend optional)
+* No venv committed
 
-Complete audit trail integrity
+---
 
-All tests run without real LLM calls to ensure reliability.
+## 🧪 Setup
 
-🔄 Trade-offs
+```bash
+pip install -r requirements.txt
+```
 
-Determinism over creativity: bounded refinement ensures predictability
+Environment variables are documented in `.env.example`.
 
-Strict schemas over flexibility: improves reliability and validation
-
-Auditability over minimal code: additional structure for traceability
-
-Logic-first design: API and persistence layers are thin wrappers
-
-🚀 Future Extensions
-
-FastAPI endpoints for /generate and /history
-
-Persistence using SQLite or PostgreSQL
-
-Dashboard for viewing run artifacts
-
-Advanced reviewer scoring strategies
-
-Deployment-ready API layer
+-
